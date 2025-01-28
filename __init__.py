@@ -1,48 +1,42 @@
-from products import dao
+import json
+from cart import dao
+from products import Product, get_products_batch
+from itertools import chain
 
-
-class Product:
-    def __init__(self, id: int, name: str, description: str, cost: float, qty: int = 0):
+class Cart:
+    def __init__(self, id: int, username: str, contents: list[Product], cost: float):
         self.id = id
-        self.name = name
-        self.description = description
+        self.username = username
+        self.contents = contents
         self.cost = cost
-        self.qty = qty
 
+    @staticmethod
     def load(data):
-        return Product(data['id'], data['name'], data['description'], data['cost'], data['qty'])
+        return Cart(data['id'], data['username'], data['contents'], data['cost'])
 
 
-def list_products() -> list[Product]:
-    products = dao.list_products()
-    result = []
-    for product in products:
-        result.append(Product.load(product))
-
-    return result
+def get_cart(username: str) -> list:
+    cart_details = dao.get_cart(username)
+    if not cart_details:
+        return []
 
 
+    items = list(chain.from_iterable(json.loads(cart_detail['contents']) for cart_detail in cart_details))
 
-def get_product(product_id: int) -> Product:
-    return Product.load(dao.get_product(product_id))
+    products_details = get_products_batch(items)  # Batch fetch products
 
-
-def add_product(product: dict):
-    dao.add_product(product)
+    return products_details
 
 
-def update_qty(product_id: int, qty: int):
-    if qty < 0:
-        raise ValueError('Quantity cannot be negative')
-    dao.update_qty(product_id, qty)
+def add_to_cart(username: str, product_id: int):
+    dao.add_to_cart(username, product_id)
 
-def get_products_batch(product_ids: list[int]) -> list[Product]:
 
-    # Fetch product details for all IDs from the DAO
-    products_data = dao.get_products_batch(product_ids)
+def remove_from_cart(username: str, product_id: int):
+    dao.remove_from_cart(username, product_id)
 
-    # Convert each product dictionary into a Product object
-    products = [Product.load(product_data) for product_data in products_data]
 
-    return products
+def delete_cart(username: str):
+    dao.delete_cart(username)
+
 
